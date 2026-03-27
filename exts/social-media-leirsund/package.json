@@ -16,10 +16,40 @@
   "commands": [
     {
       "name": "create-post",
-      "title": "Create post",
-      "subtitle": "Create social media post",
+      "title": "Create Post",
+      "subtitle": "Publish to X and Instagram",
       "description": "Publish social media posts on configured platforms",
       "mode": "view"
+    },
+    {
+      "name": "schedule-post",
+      "title": "Schedule Post",
+      "subtitle": "Post at a future time",
+      "description": "Schedule a social media post to be published at a future time",
+      "mode": "view"
+    },
+    {
+      "name": "scheduled-posts",
+      "title": "Scheduled Posts",
+      "subtitle": "View and manage scheduled posts",
+      "description": "View, delete or immediately publish your scheduled posts",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "instagramUserId",
+      "type": "textfield",
+      "required": true,
+      "title": "Instagram User ID",
+      "description": "Your Instagram Business/Creator account user ID (numeric)"
+    },
+    {
+      "name": "instagramAccessToken",
+      "type": "password",
+      "required": true,
+      "title": "Instagram Access Token",
+      "description": "Long-lived Instagram Graph API access token from Meta for Developers"
     }
   ],
   "dependencies": {

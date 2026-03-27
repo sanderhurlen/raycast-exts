@@ -1,8 +1,8 @@
-import { Action, ActionPanel, Form, open, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, environment, Form, showToast, Toast } from "@raycast/api";
 import { useState } from "react";
 import z from "zod";
-import { publishPost } from "./publish";
-import type { PostPayload, Platform } from "./types";
+import { schedulePost } from "./scheduler";
+import type { Platform, PostPayload } from "./types";
 
 const formSchema = z.object({
   "channel-instagram": z.boolean(),
@@ -11,6 +11,7 @@ const formSchema = z.object({
   tags: z.array(z.string()),
   xImages: z.array(z.string()),
   instagramImageUrls: z.string(),
+  scheduledAt: z.date({ required_error: "Scheduled time is required" }),
 });
 
 export default function Command() {
@@ -32,6 +33,12 @@ export default function Command() {
       return;
     }
 
+    const scheduledAt = parsed.data.scheduledAt;
+    if (scheduledAt <= new Date()) {
+      showToast({ style: Toast.Style.Failure, title: "Invalid time", message: "Scheduled time must be in the future" });
+      return;
+    }
+
     const instagramImageUrls = parsed.data.instagramImageUrls
       .split("\n")
       .map((u) => u.trim())
@@ -46,37 +53,15 @@ export default function Command() {
     };
 
     setIsLoading(true);
-    showToast({ style: Toast.Style.Animated, title: "Publishing…" });
-
     try {
-      const results = await publishPost(payload);
-      const failed = results.filter((r) => !r.success);
-      const succeeded = results.filter((r) => r.success);
-
-      if (failed.length > 0 && succeeded.length === 0) {
-        showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to publish",
-          message: failed.map((r) => `${r.platform}: ${r.error}`).join("\n"),
-        });
-      } else {
-        const urls = succeeded.map((r) => r.url).filter(Boolean) as string[];
-        showToast({
-          style: Toast.Style.Success,
-          title: failed.length > 0 ? "Partially published" : "Published!",
-          message: failed.length > 0 ? `Failed: ${failed.map((r) => r.platform).join(", ")}` : undefined,
-          primaryAction:
-            urls[0] != null
-              ? { title: "Open post", onAction: () => open(urls[0]) }
-              : undefined,
-          secondaryAction:
-            urls[1] != null
-              ? { title: "Open second post", onAction: () => open(urls[1]) }
-              : undefined,
-        });
-      }
+      schedulePost(payload, scheduledAt, environment.assetsPath);
+      const formatted = scheduledAt.toLocaleString("en-GB", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+      showToast({ style: Toast.Style.Success, title: "Scheduled!", message: `Will post on ${formatted}` });
     } catch (e) {
-      showToast({ style: Toast.Style.Failure, title: "Error", message: String(e) });
+      showToast({ style: Toast.Style.Failure, title: "Failed to schedule", message: String(e) });
     } finally {
       setIsLoading(false);
     }
@@ -87,11 +72,13 @@ export default function Command() {
       isLoading={isLoading}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Publish Now" onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Schedule Post" onSubmit={handleSubmit} />
         </ActionPanel>
       }
     >
-      <Form.Description text="Create and publish a social media post" />
+      <Form.Description text="Schedule a post for a future time" />
+      <Form.DatePicker id="scheduledAt" title="Schedule for" type={Form.DatePicker.Type.DateTime} />
+      <Form.Separator />
       <Form.Checkbox id="channel-x" title="Channels" label="X (Twitter)" defaultValue={true} />
       <Form.Checkbox id="channel-instagram" label="Instagram" defaultValue={true} />
       <Form.TextArea id="content" title="Content" placeholder="What's on your mind?" />
